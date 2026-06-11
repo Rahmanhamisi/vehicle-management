@@ -11,11 +11,10 @@ class AuthController extends Controller
     // REGISTER
     public function register(Request $request)
     {
-        // ✅ Validate input
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users,email',
-            'password' => 'required|string|min:6',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
         ]);
 
         $user = User::create([
@@ -24,13 +23,18 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return response()->json($user);
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'user' => $user,
+            'token' => $token
+        ]);
     }
 
-    // LOGIN
+    // LOGIN (FIXED)
     public function login(Request $request)
     {
-        // ✅ Validate input
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -39,24 +43,27 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json([
+                'message' => 'Invalid credentials'
+            ], 401);
         }
 
-        // ✅ Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'token' => $token,
-            'user' => $user
+            'message' => 'Login successful',
+            'user' => $user,
+            'token' => $token
         ]);
     }
 
     // LOGOUT
     public function logout(Request $request)
     {
-        // ✅ Delete current token only (better practice)
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out']);
+        return response()->json([
+            'message' => 'Logged out'
+        ]);
     }
 }
